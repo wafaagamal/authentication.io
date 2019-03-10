@@ -107,6 +107,8 @@ app.post('/api/login',(req,res)=>{
              if( result.emailVerified== true){
                 if(result.comparePass(req.body.password)){
                     let ticket=jwt.sign(req.body)
+                    result.ticket=ticket
+                    result.save()
                     res.status(200).send({ticket:ticket});
                     } else{
                         res.status(400).send({error: 'invalid password'});
@@ -167,6 +169,101 @@ app.get('/api/verify/:code',function(req,res){
    
     
 });
+
+app.post('/api/reset',(req,res)=>{
+    var x = [
+ 
+        {
+            param: 'password',
+            label: 'Password',
+            required: true,
+            type: 'string',
+            length: { min:6, max: 20}
+        },{
+            param: 'newPassword',
+            label: 'newPassword',
+            required: true,
+            type: 'string',
+            length: { min:6, max: 20}
+        }
+    ]
+    let ucheck = new uCheck.validate(req).scenario(x);
+ 
+    if(ucheck.hasErrors()){
+        res.status(400).send({error: ucheck.getErrors()});
+        return false;
+     
+    }else{
+          if(!req.headers.ticket){
+            res.status(401).send({error: 'un-authurized'});
+          }else{
+              User.findOne({ticket:req.headers.ticket}).exec(function(err,user){
+                  if (err)console.log(err);
+                  if(user){  
+                     if(user.comparePass(req.body.password)) {
+                         user.updatePass(req.body.newPassword)
+                         user.save()
+                         res.status(200).send({message: 'password updated successfully'});
+                     }else{
+                        res.status(400).send({error: 'invalid password'});
+                     }
+                  }
+                  else{
+                    res.status(404).send({error: 'does not exit'});
+                  }
+              })
+          }
+    }
+})
+
+app.post('/api/forget',(req,res)=>{
+    var x = [
+
+        {
+            param: 'email',
+            label: 'Email',
+            required: true,
+            type: 'string',
+            length: { min: 10 , max: 30},
+            regex: /^\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,4}$/
+        },
+        {
+            param: 'newPassword',
+            label: 'newPassword',
+            required: true,
+            type: 'string',
+            length: { min:6, max: 20}
+        }
+     ]
+    let ucheck = new uCheck.validate(req).scenario(x);
+    if(ucheck.hasErrors()){
+        res.status(400).send({error: ucheck.getErrors()});
+        return false;
+    }else{
+      if(req.body.email && req.body.email!=undefined &&req.body.newPassword && req.body.newPassword!=undefined){
+          User.findOne({email:req.body.email}).exec(function(err,user){
+              if(err)console.log(err);
+              if(user){
+                  if(user.emailVerified==true){
+                    user.updatePass(req.body.newPassword)
+                    user.save()
+                    res.status(200).send({message: 'password updated successfully'});
+                  }else{
+                    res.status(400).send({error: 'email not verifid'}); 
+                  }
+               
+              }else{
+                res.status(404).send({error: 'email not exit'}); 
+              }
+              
+          })
+
+      }else{
+        res.status(400).send({error: 'invalid email Or password'});
+      }
+    }
+})
+
 
 app.listen(3000,function () {
     console.log('server listening on port 3000')

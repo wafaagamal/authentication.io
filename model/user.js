@@ -11,7 +11,8 @@ mobilenumber :         {type :String},
 emailVerified        : { type: Boolean, default: false},
 emailVerifiedAt      : { type: Date},
 active               : { type: Boolean, default: false},
-createdAt            : { type: Date, default: Date.now }
+createdAt            : { type: Date, default: Date.now },
+ticket               : { type :String}
 
 },{ usePushEach: true })
 
@@ -25,8 +26,6 @@ User.methods.generateHash=function(password){
    return bcrypt.hashSync(password,bcrypt.genSaltSync(10),null)
 }
 User.methods.comparePass=function(password){
-  console.log(password,"====pass=====");
-  console.log(this.password,"====pass=====");
     if(!this.password) return false;
     return bcrypt.compareSync(password,this.password)
 }
@@ -34,6 +33,9 @@ User.methods.emailVerification=function(){
   this.emailVerified=true
   this.active=true
   this.emailVerifiedAt=Date.now()
+}
+User.methods.updatePass=function(newPassword){
+ this.password=this.generateHash(newPassword)
 }
 User.pre('save', function(next) {
 	next();
